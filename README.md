@@ -53,6 +53,7 @@ This is a fork of [rsworktree](https://github.com/ozankasikci/rust-git-worktree)
 ### `rsworktree cd`
 
 - Spawn an interactive shell rooted in the named worktree.
+- **Tmux integration**: When running inside a tmux session, creates a new tmux window (or switches to it if it already exists) named `<project>/<worktree>`.
 - Demo: ![CD demo](tapes/gifs/cd.gif)
 - Options:
   - `--print` — write the worktree path to stdout without spawning a shell.

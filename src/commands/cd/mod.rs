@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::{path::Path, process::Command};
 
 use color_eyre::eyre::{self, WrapErr};
 use owo_colors::{OwoColorize, Stream};
@@ -46,11 +46,20 @@ impl CdCommand {
             return Ok(());
         }
 
+        // Check if we're in a tmux session
+        if std::env::var("TMUX").is_ok() {
+            return self.execute_tmux(repo, &canonical);
+        }
+
+        self.execute_shell(&canonical)
+    }
+
+    fn execute_shell(&self, canonical: &Path) -> color_eyre::Result<()> {
         let (program, args) = shell_command();
 
         let mut cmd = Command::new(&program);
         cmd.args(args);
-        cmd.current_dir(&canonical);
+        cmd.current_dir(canonical);
         cmd.env("PWD", canonical.as_os_str());
         cmd.status()
             .wrap_err("failed to spawn subshell")?
@@ -58,6 +67,73 @@ impl CdCommand {
             .then_some(())
             .ok_or_else(|| eyre::eyre!("subshell exited with a non-zero status"))
     }
+
+    fn execute_tmux(&self, repo: &Repo, canonical: &Path) -> color_eyre::Result<()> {
+        let project_name = repo
+            .root()
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown");
+
+        let window_name = format!("{}/{}", project_name, self.name);
+
+        // Check if window with this name already exists
+        let list_output = Command::new("tmux")
+            .args(["list-windows", "-F", "#{window_name}"])
+            .output()
+            .wrap_err("failed to list tmux windows")?;
+
+        let existing_windows = String::from_utf8_lossy(&list_output.stdout);
+        let window_exists = existing_windows
+            .lines()
+            .any(|line| line.trim() == window_name);
+
+        if window_exists {
+            // Switch to existing window
+            let status = Command::new("tmux")
+                .args(["select-window", "-t", &window_name])
+                .status()
+                .wrap_err("failed to switch to tmux window")?;
+
+            if !status.success() {
+                return Err(eyre::eyre!("failed to switch to tmux window `{}`", window_name));
+            }
+
+            let window_label = format_with_color(&window_name, |text| {
+                format!("{}", text.cyan().bold())
+            });
+            println!("Switched to tmux window `{}`", window_label);
+        } else {
+            // Create new window
+            let status = Command::new("tmux")
+                .args([
+                    "new-window",
+                    "-n",
+                    &window_name,
+                    "-c",
+                    &canonical.display().to_string(),
+                ])
+                .status()
+                .wrap_err("failed to create tmux window")?;
+
+            if !status.success() {
+                return Err(eyre::eyre!("failed to create tmux window `{}`", window_name));
+            }
+
+            let window_label = format_with_color(&window_name, |text| {
+                format!("{}", text.cyan().bold())
+            });
+            println!("Created tmux window `{}`", window_label);
+        }
+
+        Ok(())
+    }
+}
+
+fn format_with_color(value: &str, paint: impl Fn(&str) -> String) -> String {
+    value
+        .if_supports_color(Stream::Stdout, |text| paint(text))
+        .to_string()
 }
 
 pub(crate) fn shell_command() -> (String, Vec<String>) {
