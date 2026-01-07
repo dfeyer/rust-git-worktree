@@ -6,6 +6,8 @@ This is a fork of [rsworktree](https://github.com/ozankasikci/rust-git-worktree)
 
 - Rename `pr-github` command to `review`
 - Rename `merge-pr-github` command to `merge`
+- Rename `open-editor` command to `editor`
+- Opiniated support of TMUX
 
 ---
 
@@ -28,7 +30,7 @@ This is a fork of [rsworktree](https://github.com/ozankasikci/rust-git-worktree)
   - [`rsworktree rm`](#rsworktree-rm)
   - [`rsworktree review`](#rsworktree-review)
   - [`rsworktree merge`](#rsworktree-merge)
-  - [`rsworktree worktree open-editor`](#rsworktree-worktree-open-editor)
+  - [`rsworktree worktree open`](#rsworktree-worktree-open)
 - [Installation](#installation)
 - [Environment](#environment)
 
@@ -101,10 +103,14 @@ This is a fork of [rsworktree](https://github.com/ozankasikci/rust-git-worktree)
   - `--provider <provider>` — git provider to use (`github` or `gitlab`); defaults to config or GitHub.
   - `--remove` — delete the remote branch after a successful merge.
 
-### `rsworktree worktree open-editor`
+### `rsworktree worktree open`
 
 - Open the specified worktree (or the current directory when omitted) in your configured editor.
 - Editor resolution checks the rsworktree config first, then falls back to `$EDITOR` / `$VISUAL`. If no editor is configured, the command prints actionable guidance instead of failing.
+- **Tmux integration**: When running inside a tmux session with a worktree window (e.g., `<project>/<worktree>`):
+  - If an editor pane exists in that window, switches to it.
+  - Otherwise, creates a new horizontal split with the editor.
+  - If the worktree window doesn't exist, creates it with the editor running.
 - Initial support focuses on `vim`, `cursor`, `webstorm`, and `rider`. For setup instructions and troubleshooting, see `specs/002-i-want-to/quickstart.md`.
 
 ## Installation

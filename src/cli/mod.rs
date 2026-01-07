@@ -12,7 +12,7 @@ use crate::{
         interactive,
         list::ListCommand,
         merge::MergeCommand,
-        open_editor::OpenEditorCommand,
+        open::OpenCommand,
         review::{ReviewCommand, ReviewOptions},
         rm::RemoveCommand,
     },
@@ -51,7 +51,7 @@ enum Commands {
 #[derive(Subcommand, Debug)]
 enum WorktreeCommands {
     /// Open a worktree in the configured editor.
-    OpenEditor(OpenEditorArgs),
+    Open(OpenArgs),
 }
 
 #[derive(Parser, Debug)]
@@ -82,7 +82,7 @@ struct RmArgs {
 }
 
 #[derive(Parser, Debug)]
-struct OpenEditorArgs {
+struct OpenArgs {
     /// Name of the worktree to open
     #[arg(required_unless_present = "path")]
     name: Option<String>,
@@ -154,8 +154,8 @@ pub fn run() -> color_eyre::Result<()> {
             interactive::run(&repo)?;
         }
         Commands::Worktree(command) => match command {
-            WorktreeCommands::OpenEditor(args) => {
-                let command = OpenEditorCommand::new(args.name, args.path);
+            WorktreeCommands::Open(args) => {
+                let command = OpenCommand::new(args.name, args.path);
                 command.execute(&repo)?;
             }
         },
@@ -489,29 +489,29 @@ mod tests {
     }
 
     #[test]
-    fn parses_worktree_open_editor_by_name() {
-        let cli = Cli::try_parse_from(["rsworktree", "worktree", "open-editor", "feature/test"])
-            .expect("worktree open-editor by name should parse");
+    fn parses_worktree_open_by_name() {
+        let cli = Cli::try_parse_from(["rsworktree", "worktree", "open", "feature/test"])
+            .expect("worktree open by name should parse");
         match cli.command {
-            Commands::Worktree(WorktreeCommands::OpenEditor(args)) => {
+            Commands::Worktree(WorktreeCommands::Open(args)) => {
                 assert_eq!(args.name, Some("feature/test".into()));
                 assert!(args.path.is_none());
             }
-            _ => panic!("expected Worktree OpenEditor command"),
+            _ => panic!("expected Worktree Open command"),
         }
     }
 
     #[test]
-    fn parses_worktree_open_editor_by_path() {
+    fn parses_worktree_open_by_path() {
         let cli =
-            Cli::try_parse_from(["rsworktree", "worktree", "open-editor", "--path", "/some/path"])
-                .expect("worktree open-editor by path should parse");
+            Cli::try_parse_from(["rsworktree", "worktree", "open", "--path", "/some/path"])
+                .expect("worktree open by path should parse");
         match cli.command {
-            Commands::Worktree(WorktreeCommands::OpenEditor(args)) => {
+            Commands::Worktree(WorktreeCommands::Open(args)) => {
                 assert!(args.name.is_none());
                 assert_eq!(args.path, Some(PathBuf::from("/some/path")));
             }
-            _ => panic!("expected Worktree OpenEditor command"),
+            _ => panic!("expected Worktree Open command"),
         }
     }
 
