@@ -42,9 +42,9 @@ enum Commands {
     Worktree(WorktreeCommands),
     /// Remove a worktree tracked in `.rsworktree`.
     Rm(RmArgs),
-    /// Create a GitHub pull request for the worktree's branch using the GitHub CLI.
+    /// Create a pull/merge request for the worktree's branch (supports GitHub and GitLab).
     Review(ReviewArgs),
-    /// Merge the GitHub pull request for the current or named worktree.
+    /// Merge the pull/merge request for the current or named worktree (supports GitHub and GitLab).
     Merge(MergeArgs),
 }
 
@@ -110,7 +110,7 @@ struct ReviewArgs {
     /// Remote to push the branch to before creating the PR
     #[arg(long, default_value = "origin")]
     remote: String,
-    /// Request reviews from the given GitHub handles
+    /// Request reviews from the given user handles
     #[arg(long = "reviewer", value_name = "login")]
     reviewers: Vec<String>,
     /// Git provider to use (github or gitlab)

@@ -532,12 +532,12 @@ impl Snapshot {
             .split(popup_area);
 
         let header_lines = vec![
-            Line::from(format!("Merge PR for `{name}`")),
+            Line::from(format!("Merge PR/MR for `{name}`")),
             Line::from("Choose the cleanup steps to run after merging."),
         ];
         let header = Paragraph::new(header_lines).block(
             Block::default()
-                .title("Merge PR (GitHub)")
+                .title("Merge PR/MR")
                 .borders(Borders::ALL),
         );
         frame.render_widget(header, layout[0]);
