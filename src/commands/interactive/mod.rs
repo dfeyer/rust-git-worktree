@@ -41,7 +41,7 @@ pub(crate) const GLOBAL_ACTIONS: [&str; 2] = ["Create worktree", "Cd to root dir
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Selection {
     Worktree(String),
-    PrGithub(String),
+    Review(String),
     MergePrGithub {
         name: String,
         remove_local_branch: bool,
@@ -56,7 +56,7 @@ pub(crate) enum Action {
     Open,
     OpenInEditor,
     Remove,
-    PrGithub,
+    Review,
     MergePrGithub,
 }
 
@@ -65,7 +65,7 @@ impl Action {
         Action::Open,
         Action::OpenInEditor,
         Action::Remove,
-        Action::PrGithub,
+        Action::Review,
         Action::MergePrGithub,
     ];
 
@@ -74,7 +74,7 @@ impl Action {
             Action::Open => "Open",
             Action::OpenInEditor => "Open in Editor",
             Action::Remove => "Remove",
-            Action::PrGithub => "PR (GitHub)",
+            Action::Review => "Review (GitHub)",
             Action::MergePrGithub => "Merge PR (GitHub)",
         }
     }
@@ -85,7 +85,7 @@ impl Action {
             Action::Open
                 | Action::OpenInEditor
                 | Action::Remove
-                | Action::PrGithub
+                | Action::Review
                 | Action::MergePrGithub
         )
     }

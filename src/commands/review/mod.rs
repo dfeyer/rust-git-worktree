@@ -10,7 +10,7 @@ use owo_colors::{OwoColorize, Stream};
 use crate::Repo;
 
 #[derive(Debug)]
-pub struct PrGithubOptions {
+pub struct ReviewOptions {
     pub name: String,
     pub push: bool,
     pub draft: bool,
@@ -22,7 +22,7 @@ pub struct PrGithubOptions {
 }
 
 #[derive(Debug)]
-pub struct PrGithubCommand<R = SystemCommandRunner> {
+pub struct ReviewCommand<R = SystemCommandRunner> {
     name: String,
     push: bool,
     draft: bool,
@@ -34,18 +34,18 @@ pub struct PrGithubCommand<R = SystemCommandRunner> {
     runner: R,
 }
 
-impl PrGithubCommand {
-    pub fn new(options: PrGithubOptions) -> Self {
+impl ReviewCommand {
+    pub fn new(options: ReviewOptions) -> Self {
         Self::with_runner(options, SystemCommandRunner)
     }
 }
 
-impl<R> PrGithubCommand<R>
+impl<R> ReviewCommand<R>
 where
     R: CommandRunner,
 {
-    pub fn with_runner(options: PrGithubOptions, runner: R) -> Self {
-        let PrGithubOptions {
+    pub fn with_runner(options: ReviewOptions, runner: R) -> Self {
+        let ReviewOptions {
             name,
             push,
             draft,
@@ -546,7 +546,7 @@ mod tests {
             status_code: Some(0),
         }));
 
-        let options = PrGithubOptions {
+        let options = ReviewOptions {
             name: "feature/test".into(),
             push: true,
             draft: false,
@@ -556,7 +556,7 @@ mod tests {
             reviewers: vec!["octocat".into()],
             extra_args: vec!["--label".into(), "ready".into()],
         };
-        let mut command = PrGithubCommand::with_runner(options, runner);
+        let mut command = ReviewCommand::with_runner(options, runner);
 
         command.execute(&repo)?;
 
@@ -634,7 +634,7 @@ mod tests {
             status_code: Some(0),
         }));
 
-        let options = PrGithubOptions {
+        let options = ReviewOptions {
             name: "feature/test".into(),
             push: false,
             draft: true,
@@ -644,7 +644,7 @@ mod tests {
             reviewers: Vec::new(),
             extra_args: Vec::new(),
         };
-        let mut command = PrGithubCommand::with_runner(options, runner);
+        let mut command = ReviewCommand::with_runner(options, runner);
 
         command.execute(&repo)?;
 
@@ -680,7 +680,7 @@ mod tests {
         init_git_repo(&repo_dir)?;
         let repo = Repo::discover_from(repo_dir.path())?;
 
-        let options = PrGithubOptions {
+        let options = ReviewOptions {
             name: "missing".into(),
             push: true,
             draft: false,
@@ -690,7 +690,7 @@ mod tests {
             reviewers: Vec::new(),
             extra_args: Vec::new(),
         };
-        let mut command = PrGithubCommand::with_runner(options, MockCommandRunner::default());
+        let mut command = ReviewCommand::with_runner(options, MockCommandRunner::default());
 
         let err = command.execute(&repo).unwrap_err();
         assert!(err.to_string().contains("does not exist"));
@@ -713,7 +713,7 @@ mod tests {
             status_code: Some(128),
         }));
 
-        let options = PrGithubOptions {
+        let options = ReviewOptions {
             name: "feature/test".into(),
             push: true,
             draft: false,
@@ -723,7 +723,7 @@ mod tests {
             reviewers: Vec::new(),
             extra_args: Vec::new(),
         };
-        let mut command = PrGithubCommand::with_runner(options, runner);
+        let mut command = ReviewCommand::with_runner(options, runner);
 
         let err = command.execute(&repo).unwrap_err();
         assert!(err.to_string().contains("git rev-parse"));
@@ -760,7 +760,7 @@ mod tests {
             }),
         ]);
 
-        let options = PrGithubOptions {
+        let options = ReviewOptions {
             name: "feature/test".into(),
             push: true,
             draft: false,
@@ -770,7 +770,7 @@ mod tests {
             reviewers: Vec::new(),
             extra_args: Vec::new(),
         };
-        let mut command = PrGithubCommand::with_runner(options, runner);
+        let mut command = ReviewCommand::with_runner(options, runner);
 
         command.execute(&repo)?;
 

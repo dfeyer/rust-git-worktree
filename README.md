@@ -17,7 +17,7 @@
   - [`rsworktree cd`](#rsworktree-cd)
   - [`rsworktree ls`](#rsworktree-ls)
   - [`rsworktree rm`](#rsworktree-rm)
-  - [`rsworktree pr-github`](#rsworktree-pr-github)
+  - [`rsworktree review`](#rsworktree-review)
   - [`rsworktree merge`](#rsworktree-merge)
   - [`rsworktree worktree open-editor`](#rsworktree-worktree-open-editor)
 - [Installation](#installation)
@@ -62,10 +62,10 @@
 - Options:
   - `--force` — force removal, mirroring `git worktree remove --force`.
 
-### `rsworktree pr-github`
+### `rsworktree review`
 
 - Push the worktree branch and invoke `gh pr create` for the current or named worktree.
-- Demo: ![PR demo](tapes/gifs/pr_github.gif)
+- Demo: ![Review demo](tapes/gifs/review.gif)
 - Requires the [GitHub CLI](https://cli.github.com/) (`gh`) to be installed and on your `PATH`.
 - Options:
   - `<name>` — optional explicit worktree to operate on; defaults to the current directory.

@@ -414,9 +414,9 @@ where
                                 Some(StatusMessage::info("No worktree selected to remove."));
                         }
                     }
-                    Action::PrGithub => {
+                    Action::Review => {
                         if let Some(entry) = self.current_entry() {
-                            return Ok(LoopControl::Exit(Some(Selection::PrGithub(
+                            return Ok(LoopControl::Exit(Some(Selection::Review(
                                 entry.name.clone(),
                             ))));
                         }

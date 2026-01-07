@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::{
     Repo,
-    commands::pr_github::{CommandOutput, CommandRunner, SystemCommandRunner},
+    commands::review::{CommandOutput, CommandRunner, SystemCommandRunner},
 };
 
 #[derive(Debug)]

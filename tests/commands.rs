@@ -8,7 +8,7 @@ mod list;
 mod merge;
 #[path = "commands/open_editor.rs"]
 mod open_editor;
-#[path = "commands/pr_github.rs"]
-mod pr_github;
+#[path = "commands/review.rs"]
+mod review;
 #[path = "commands/rm.rs"]
 mod rm;

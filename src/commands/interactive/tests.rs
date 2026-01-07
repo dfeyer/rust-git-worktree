@@ -121,7 +121,7 @@ fn navigates_down_before_selecting() -> Result<()> {
 }
 
 #[test]
-fn selecting_pr_github_action_exits_with_pr_variant() -> Result<()> {
+fn selecting_review_action_exits_with_review_variant() -> Result<()> {
     let backend = TestBackend::new(40, 12);
     let terminal = Terminal::new(backend)?;
     let events = StubEvents::new(vec![
@@ -155,7 +155,7 @@ fn selecting_pr_github_action_exits_with_pr_variant() -> Result<()> {
     )?;
 
     assert!(removed.is_empty(), "remove should not be triggered");
-    assert_eq!(result, Some(Selection::PrGithub(String::from("alpha"))));
+    assert_eq!(result, Some(Selection::Review(String::from("alpha"))));
 
     Ok(())
 }
@@ -191,7 +191,7 @@ fn action_panel_wraps_when_navigating_up() -> Result<()> {
         noop_open_editor(),
     )?;
 
-    assert_eq!(result, Some(Selection::PrGithub(String::from("alpha"))));
+    assert_eq!(result, Some(Selection::Review(String::from("alpha"))));
 
     Ok(())
 }

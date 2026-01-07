@@ -5,5 +5,5 @@ pub mod list;
 pub mod merge;
 pub mod open_editor;
 
-pub mod pr_github;
+pub mod review;
 pub mod rm;

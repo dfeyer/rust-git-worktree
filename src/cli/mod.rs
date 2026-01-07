@@ -13,7 +13,7 @@ use crate::{
         list::ListCommand,
         merge::MergeCommand,
         open_editor::OpenEditorCommand,
-        pr_github::{PrGithubCommand, PrGithubOptions},
+        review::{ReviewCommand, ReviewOptions},
         rm::RemoveCommand,
     },
 };
@@ -42,7 +42,7 @@ enum Commands {
     /// Remove a worktree tracked in `.rsworktree`.
     Rm(RmArgs),
     /// Create a GitHub pull request for the worktree's branch using the GitHub CLI.
-    PrGithub(PrGithubArgs),
+    Review(ReviewArgs),
     /// Merge the GitHub pull request for the current or named worktree.
     Merge(MergeArgs),
 }
@@ -91,7 +91,7 @@ struct OpenEditorArgs {
 }
 
 #[derive(Parser, Debug)]
-struct PrGithubArgs {
+struct ReviewArgs {
     /// Name of the worktree to prepare a PR from (defaults to the current worktree)
     name: Option<String>,
     /// Skip pushing the branch before creating the PR
@@ -156,9 +156,9 @@ pub fn run() -> color_eyre::Result<()> {
             let command = RemoveCommand::new(args.name, args.force);
             let _ = command.execute(&repo)?;
         }
-        Commands::PrGithub(args) => {
-            let worktree_name = resolve_worktree_name(args.name, &repo, "pr-github")?;
-            let options = PrGithubOptions {
+        Commands::Review(args) => {
+            let worktree_name = resolve_worktree_name(args.name, &repo, "review")?;
+            let options = ReviewOptions {
                 name: worktree_name,
                 push: !args.no_push,
                 draft: args.draft,
@@ -168,7 +168,7 @@ pub fn run() -> color_eyre::Result<()> {
                 reviewers: args.reviewers,
                 extra_args: args.extra,
             };
-            let mut command = PrGithubCommand::new(options);
+            let mut command = ReviewCommand::new(options);
             command.execute(&repo)?;
         }
         Commands::Merge(args) => {
@@ -313,7 +313,7 @@ mod tests {
         init_git_repo(&repo_dir)?;
         let repo = Repo::discover_from(repo_dir.path())?;
 
-        let resolved = resolve_worktree_name(Some("feature/test".into()), &repo, "pr-github")?;
+        let resolved = resolve_worktree_name(Some("feature/test".into()), &repo, "review")?;
         assert_eq!(resolved, "feature/test");
 
         Ok(())
@@ -341,7 +341,7 @@ mod tests {
         fs::create_dir_all(&worktree_dir)?;
 
         let _guard = DirGuard::change_to(&worktree_dir)?;
-        let resolved = resolve_worktree_name(None, &repo, "pr-github")?;
+        let resolved = resolve_worktree_name(None, &repo, "review")?;
         assert_eq!(resolved, "feature/nested");
 
         Ok(())
@@ -354,7 +354,7 @@ mod tests {
         let repo = Repo::discover_from(repo_dir.path())?;
         let _guard = DirGuard::change_to(repo.root())?;
 
-        let err = resolve_worktree_name(None, &repo, "pr-github").unwrap_err();
+        let err = resolve_worktree_name(None, &repo, "review").unwrap_err();
         assert!(err.to_string().contains("must be run from inside"));
 
         Ok(())
@@ -368,10 +368,10 @@ mod tests {
         let worktrees_dir = repo.ensure_worktrees_dir()?;
         let _guard = DirGuard::change_to(&worktrees_dir)?;
 
-        let err = resolve_worktree_name(None, &repo, "pr-github").unwrap_err();
+        let err = resolve_worktree_name(None, &repo, "review").unwrap_err();
         assert!(
             err.to_string()
-                .contains("Run `rsworktree pr-github` from inside")
+                .contains("Run `rsworktree review` from inside")
         );
 
         Ok(())
@@ -417,10 +417,10 @@ mod tests {
     }
 
     #[test]
-    fn parses_pr_github_with_all_flags() {
+    fn parses_review_with_all_flags() {
         let cli = Cli::try_parse_from([
             "rsworktree",
-            "pr-github",
+            "review",
             "my-feature",
             "--no-push",
             "--draft",
@@ -436,9 +436,9 @@ mod tests {
             "--label",
             "bug",
         ])
-        .expect("pr-github with all flags should parse");
+        .expect("review with all flags should parse");
         match cli.command {
-            Commands::PrGithub(args) => {
+            Commands::Review(args) => {
                 assert_eq!(args.name, Some("my-feature".into()));
                 assert!(args.no_push);
                 assert!(args.draft);
@@ -448,7 +448,7 @@ mod tests {
                 assert_eq!(args.reviewers, vec!["alice", "bob"]);
                 assert_eq!(args.extra, vec!["--label", "bug"]);
             }
-            _ => panic!("expected PrGithub command"),
+            _ => panic!("expected Review command"),
         }
     }
 

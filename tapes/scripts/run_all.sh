@@ -17,6 +17,6 @@ cd "$REPO_ROOT"
 
 mkdir -p "$TAPES_DIR/gifs"
 
-for tape in create cd ls rm pr_github merge interactive-mode; do
+for tape in create cd ls rm review merge interactive-mode; do
   vhs < "$TAPES_DIR/${tape}.tape"
 done

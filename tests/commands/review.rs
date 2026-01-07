@@ -58,13 +58,13 @@ fn run(dir: &Path, cmd: impl IntoIterator<Item = &'static str>) -> Result<(), Bo
 }
 
 #[test]
-fn pr_github_reports_missing_worktree() -> Result<(), Box<dyn Error>> {
+fn review_reports_missing_worktree() -> Result<(), Box<dyn Error>> {
     let repo_dir = TempDir::new()?;
     init_git_repo(repo_dir.path())?;
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
-        .args(["pr-github", "missing", "--no-push"])
+        .args(["review", "missing", "--no-push"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("does not exist"));
@@ -73,7 +73,7 @@ fn pr_github_reports_missing_worktree() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn pr_github_invokes_gh_with_expected_arguments() -> Result<(), Box<dyn Error>> {
+fn review_invokes_gh_with_expected_arguments() -> Result<(), Box<dyn Error>> {
     let repo_dir = TempDir::new()?;
     init_git_repo(repo_dir.path())?;
 
@@ -92,7 +92,7 @@ fn pr_github_invokes_gh_with_expected_arguments() -> Result<(), Box<dyn Error>> 
         .env("GH_LOG", &stub.log_path)
         .env("GH_STDOUT", "https://example.com/pulls/42")
         .args([
-            "pr-github",
+            "review",
             "feature/test",
             "--no-push",
             "--draft",
@@ -125,7 +125,7 @@ fn pr_github_invokes_gh_with_expected_arguments() -> Result<(), Box<dyn Error>> 
 }
 
 #[test]
-fn pr_github_defaults_to_current_worktree() -> Result<(), Box<dyn Error>> {
+fn review_defaults_to_current_worktree() -> Result<(), Box<dyn Error>> {
     let repo_dir = TempDir::new()?;
     init_git_repo(repo_dir.path())?;
 
@@ -148,7 +148,7 @@ fn pr_github_defaults_to_current_worktree() -> Result<(), Box<dyn Error>> {
         .current_dir(&worktree_path)
         .env("PATH", &stub.path_value)
         .env("GH_LOG", &stub.log_path)
-        .args(["pr-github", "--no-push", "--fill", "--", "--label", "ready"])
+        .args(["review", "--no-push", "--fill", "--", "--label", "ready"])
         .assert()
         .success();
 
@@ -161,13 +161,13 @@ fn pr_github_defaults_to_current_worktree() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn pr_github_without_name_errors_outside_worktree() -> Result<(), Box<dyn Error>> {
+fn review_without_name_errors_outside_worktree() -> Result<(), Box<dyn Error>> {
     let repo_dir = TempDir::new()?;
     init_git_repo(repo_dir.path())?;
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
-        .args(["pr-github"])
+        .args(["review"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("must be run from inside"));
@@ -176,7 +176,7 @@ fn pr_github_without_name_errors_outside_worktree() -> Result<(), Box<dyn Error>
 }
 
 #[test]
-fn pr_github_defaults_to_fill_when_metadata_missing() -> Result<(), Box<dyn Error>> {
+fn review_defaults_to_fill_when_metadata_missing() -> Result<(), Box<dyn Error>> {
     let repo_dir = TempDir::new()?;
     init_git_repo(repo_dir.path())?;
 
@@ -199,7 +199,7 @@ fn pr_github_defaults_to_fill_when_metadata_missing() -> Result<(), Box<dyn Erro
         .current_dir(&worktree_path)
         .env("PATH", &stub.path_value)
         .env("GH_LOG", &stub.log_path)
-        .args(["pr-github", "--no-push"])
+        .args(["review", "--no-push"])
         .assert()
         .success();
 

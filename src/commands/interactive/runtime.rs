@@ -15,7 +15,7 @@ use crate::{
         create::{CreateCommand, CreateOutcome},
         list::{find_worktrees, format_worktree},
         merge::MergeCommand,
-        pr_github::{PrGithubCommand, PrGithubOptions},
+        review::{ReviewCommand, ReviewOptions},
         rm::RemoveCommand,
     },
     editor::launch_worktree,
@@ -107,8 +107,8 @@ pub fn run(repo: &Repo) -> Result<()> {
                 let command = CdCommand::new(name, false);
                 command.execute(repo)?;
             }
-            Selection::PrGithub(name) => {
-                let options = PrGithubOptions {
+            Selection::Review(name) => {
+                let options = ReviewOptions {
                     name,
                     push: true,
                     draft: false,
@@ -118,7 +118,7 @@ pub fn run(repo: &Repo) -> Result<()> {
                     reviewers: Vec::new(),
                     extra_args: Vec::new(),
                 };
-                let mut command = PrGithubCommand::new(options);
+                let mut command = ReviewCommand::new(options);
                 command.execute(repo)?;
             }
             Selection::MergePrGithub {
