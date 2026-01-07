@@ -7,7 +7,7 @@ use std::{
 
 use serde::Deserialize;
 
-use crate::Repo;
+use crate::{GitProvider, Repo};
 
 pub const CONFIG_FILE_NAME: &str = "preferences.json";
 
@@ -62,6 +62,8 @@ pub enum PreferenceMissingReason {
 struct FileFormat {
     #[serde(default)]
     editor: Option<FileEditorPreference>,
+    #[serde(default)]
+    provider: Option<GitProvider>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -105,6 +107,41 @@ pub fn resolve_editor_preference(repo: &Repo) -> color_eyre::Result<EditorPrefer
     Ok(EditorPreferenceResolution::Missing(
         PreferenceMissingReason::NotConfigured,
     ))
+}
+
+/// Resolve the git provider preference.
+///
+/// Resolution order:
+/// 1. Config file (`preferences.json`)
+/// 2. Environment variable (`RSWORKTREE_PROVIDER`)
+/// 3. Default (GitHub)
+pub fn resolve_provider_preference(repo: &Repo) -> color_eyre::Result<GitProvider> {
+    let config_path = repo.worktrees_dir().join(CONFIG_FILE_NAME);
+
+    // Try config file first
+    if config_path.exists() {
+        if let Ok(provider) = load_provider_from_config(&config_path) {
+            if let Some(provider) = provider {
+                return Ok(provider);
+            }
+        }
+    }
+
+    // Try environment variable
+    if let Ok(value) = env::var("RSWORKTREE_PROVIDER") {
+        if let Ok(provider) = value.parse::<GitProvider>() {
+            return Ok(provider);
+        }
+    }
+
+    // Default to GitHub
+    Ok(GitProvider::default())
+}
+
+fn load_provider_from_config(path: &Path) -> color_eyre::Result<Option<GitProvider>> {
+    let text = fs::read_to_string(path)?;
+    let parsed: FileFormat = serde_json::from_str(&text)?;
+    Ok(parsed.provider)
 }
 
 fn load_from_config(path: &Path) -> Result<Option<EditorPreference>, PreferenceMissingReason> {
@@ -390,5 +427,46 @@ mod tests {
             args,
             source: EditorPreferenceSource::Environment { variable },
         }))
+    }
+
+    #[test]
+    fn resolves_provider_from_config_file() {
+        let dir = TempDir::new().expect("tempdir");
+        let repo = init_repo(&dir);
+        let worktrees_dir = repo.ensure_worktrees_dir().expect("worktrees dir");
+        let config_path = worktrees_dir.join(CONFIG_FILE_NAME);
+
+        let json = serde_json::json!({
+            "provider": "gitlab"
+        });
+        fs::write(&config_path, serde_json::to_vec(&json).unwrap()).expect("write config");
+
+        let provider = resolve_provider_preference(&repo).expect("resolution");
+        assert_eq!(provider, GitProvider::GitLab);
+    }
+
+    #[test]
+    fn resolves_provider_defaults_to_github() {
+        let dir = TempDir::new().expect("tempdir");
+        let repo = init_repo(&dir);
+
+        let provider = resolve_provider_preference(&repo).expect("resolution");
+        assert_eq!(provider, GitProvider::GitHub);
+    }
+
+    #[test]
+    fn resolves_provider_with_empty_config() {
+        let dir = TempDir::new().expect("tempdir");
+        let repo = init_repo(&dir);
+        let worktrees_dir = repo.ensure_worktrees_dir().expect("worktrees dir");
+        let config_path = worktrees_dir.join(CONFIG_FILE_NAME);
+
+        let json = serde_json::json!({
+            "editor": { "command": "vim" }
+        });
+        fs::write(&config_path, serde_json::to_vec(&json).unwrap()).expect("write config");
+
+        let provider = resolve_provider_preference(&repo).expect("resolution");
+        assert_eq!(provider, GitProvider::GitHub);
     }
 }

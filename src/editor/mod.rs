@@ -10,6 +10,7 @@ pub use launch::{LaunchOutcome, LaunchRequest, launch_editor};
 pub use preference::{
     CONFIG_FILE_NAME, EditorEnvVar, EditorPreference, EditorPreferenceResolution,
     EditorPreferenceSource, PreferenceMissingReason, resolve_editor_preference,
+    resolve_provider_preference,
 };
 
 pub use support::{SupportedEditor, supported_editor_commands};

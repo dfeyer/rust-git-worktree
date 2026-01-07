@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand};
 use color_eyre::eyre::{self, WrapErr};
 
 use crate::{
-    Repo,
+    GitProvider, Repo,
     commands::{
         cd::CdCommand,
         create::CreateCommand,
@@ -16,6 +16,7 @@ use crate::{
         review::{ReviewCommand, ReviewOptions},
         rm::RemoveCommand,
     },
+    editor::resolve_provider_preference,
 };
 
 #[derive(Parser, Debug)]
@@ -112,7 +113,10 @@ struct ReviewArgs {
     /// Request reviews from the given GitHub handles
     #[arg(long = "reviewer", value_name = "login")]
     reviewers: Vec<String>,
-    /// Additional arguments passed directly to `gh pr create`
+    /// Git provider to use (github or gitlab)
+    #[arg(long, value_name = "provider")]
+    provider: Option<String>,
+    /// Additional arguments passed directly to `gh pr create` or `glab mr create`
     #[arg(last = true, value_name = "ARG")]
     extra: Vec<String>,
 }
@@ -124,6 +128,9 @@ struct MergeArgs {
     /// Remove the remote branch after merging
     #[arg(long = "remove")]
     remove_remote: bool,
+    /// Git provider to use (github or gitlab)
+    #[arg(long, value_name = "provider")]
+    provider: Option<String>,
 }
 
 pub fn run() -> color_eyre::Result<()> {
@@ -158,6 +165,7 @@ pub fn run() -> color_eyre::Result<()> {
         }
         Commands::Review(args) => {
             let worktree_name = resolve_worktree_name(args.name, &repo, "review")?;
+            let provider = resolve_provider(&args.provider, &repo)?;
             let options = ReviewOptions {
                 name: worktree_name,
                 push: !args.no_push,
@@ -167,13 +175,15 @@ pub fn run() -> color_eyre::Result<()> {
                 remote: args.remote,
                 reviewers: args.reviewers,
                 extra_args: args.extra,
+                provider,
             };
             let mut command = ReviewCommand::new(options);
             command.execute(&repo)?;
         }
         Commands::Merge(args) => {
             let worktree_name = resolve_worktree_name(args.name, &repo, "merge")?;
-            let mut command = MergeCommand::new(worktree_name);
+            let provider = resolve_provider(&args.provider, &repo)?;
+            let mut command = MergeCommand::new(worktree_name, provider);
             if args.remove_remote {
                 command.enable_remove_remote();
             }
@@ -182,6 +192,19 @@ pub fn run() -> color_eyre::Result<()> {
     }
 
     Ok(())
+}
+
+fn resolve_provider(
+    cli_provider: &Option<String>,
+    repo: &Repo,
+) -> color_eyre::Result<GitProvider> {
+    if let Some(provider_str) = cli_provider {
+        provider_str
+            .parse::<GitProvider>()
+            .map_err(|e| eyre::eyre!(e))
+    } else {
+        resolve_provider_preference(repo)
+    }
 }
 
 fn resolve_worktree_name(

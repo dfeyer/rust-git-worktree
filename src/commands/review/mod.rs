@@ -7,7 +7,7 @@ use std::{
 use color_eyre::eyre::{self, WrapErr};
 use owo_colors::{OwoColorize, Stream};
 
-use crate::Repo;
+use crate::{GitProvider, Repo};
 
 #[derive(Debug)]
 pub struct ReviewOptions {
@@ -19,6 +19,7 @@ pub struct ReviewOptions {
     pub remote: String,
     pub reviewers: Vec<String>,
     pub extra_args: Vec<String>,
+    pub provider: GitProvider,
 }
 
 #[derive(Debug)]
@@ -31,6 +32,7 @@ pub struct ReviewCommand<R = SystemCommandRunner> {
     remote: String,
     reviewers: Vec<String>,
     extra_args: Vec<String>,
+    provider: GitProvider,
     runner: R,
 }
 
@@ -54,6 +56,7 @@ where
             remote,
             reviewers,
             extra_args,
+            provider,
         } = options;
         Self {
             name,
@@ -64,6 +67,7 @@ where
             remote,
             reviewers,
             extra_args,
+            provider,
             runner,
         }
     }
@@ -77,8 +81,11 @@ where
             format!("{}", text.blue())
         });
         println!(
-            "Preparing GitHub PR for `{}` from `{}`...",
-            branch_label, path_label
+            "Preparing {} {} for `{}` from `{}`...",
+            self.provider.display_name(),
+            self.provider.merge_request_short(),
+            branch_label,
+            path_label
         );
 
         self.ensure_pr_metadata_options()?;
@@ -160,38 +167,32 @@ where
         worktree_path: &Path,
         branch: &str,
     ) -> color_eyre::Result<()> {
-        let mut args = vec!["pr".to_owned(), "create".to_owned()];
-        args.push("--head".to_owned());
-        args.push(branch.to_owned());
+        let args = self.provider.build_create_args(
+            branch,
+            self.draft,
+            self.fill,
+            self.web,
+            &self.reviewers,
+            &self.extra_args,
+        );
 
-        if self.draft {
-            args.push("--draft".to_owned());
-        }
-        if self.fill {
-            args.push("--fill".to_owned());
-        }
-        if self.web {
-            args.push("--web".to_owned());
-        }
-
-        for reviewer in &self.reviewers {
-            args.push("--reviewer".to_owned());
-            args.push(reviewer.clone());
-        }
-
-        args.extend(self.extra_args.clone());
-
+        let cli_program = self.provider.cli_program();
         let output = self
             .runner
-            .run("gh", worktree_path, &args)
-            .wrap_err("failed to run `gh pr create`")?;
+            .run(cli_program, worktree_path, &args)
+            .wrap_err_with(|| format!("failed to run `{} {} create`", cli_program, if self.provider == GitProvider::GitHub { "pr" } else { "mr" }))?;
 
         if !output.success {
-            return Err(command_failure("gh", &args, &output));
+            return Err(command_failure(cli_program, &args, &output));
         }
 
         let branch_label = format_with_color(branch, |text| format!("{}", text.magenta().bold()));
-        println!("GitHub pull request created for `{}`.", branch_label);
+        println!(
+            "{} {} created for `{}`.",
+            self.provider.display_name(),
+            self.provider.merge_request_term(),
+            branch_label
+        );
         if let Some(pr_link) = output
             .stdout
             .lines()
@@ -555,6 +556,7 @@ mod tests {
             remote: "origin".into(),
             reviewers: vec!["octocat".into()],
             extra_args: vec!["--label".into(), "ready".into()],
+            provider: GitProvider::GitHub,
         };
         let mut command = ReviewCommand::with_runner(options, runner);
 
@@ -643,6 +645,7 @@ mod tests {
             remote: "origin".into(),
             reviewers: Vec::new(),
             extra_args: Vec::new(),
+            provider: GitProvider::GitHub,
         };
         let mut command = ReviewCommand::with_runner(options, runner);
 
@@ -689,6 +692,7 @@ mod tests {
             remote: "origin".into(),
             reviewers: Vec::new(),
             extra_args: Vec::new(),
+            provider: GitProvider::GitHub,
         };
         let mut command = ReviewCommand::with_runner(options, MockCommandRunner::default());
 
@@ -722,6 +726,7 @@ mod tests {
             remote: "origin".into(),
             reviewers: Vec::new(),
             extra_args: Vec::new(),
+            provider: GitProvider::GitHub,
         };
         let mut command = ReviewCommand::with_runner(options, runner);
 
@@ -769,6 +774,7 @@ mod tests {
             remote: "origin".into(),
             reviewers: Vec::new(),
             extra_args: Vec::new(),
+            provider: GitProvider::GitHub,
         };
         let mut command = ReviewCommand::with_runner(options, runner);
 

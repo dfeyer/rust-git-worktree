@@ -1,5 +1,14 @@
 # rsworktree
 
+---
+
+This is a fork of [rsworktree](https://github.com/ozankasikci/rust-git-worktree) with support for both Gitlab and Github and some command design changes:
+
+- Rename `pr-github` command to `review`
+- Rename `merge-pr-github` command to `merge`
+
+---
+
 [![Crates.io](https://img.shields.io/crates/v/rsworktree.svg)](https://crates.io/crates/rsworktree)
 [![Downloads](https://img.shields.io/crates/d/rsworktree.svg)](https://crates.io/crates/rsworktree)
 [![License](https://img.shields.io/crates/l/rsworktree.svg)](https://github.com/ozankasikci/rust-git-worktree/blob/master/LICENSE)
@@ -64,26 +73,32 @@
 
 ### `rsworktree review`
 
-- Push the worktree branch and invoke `gh pr create` for the current or named worktree.
+- Push the worktree branch and create a pull/merge request for the current or named worktree.
 - Demo: ![Review demo](tapes/gifs/review.gif)
-- Requires the [GitHub CLI](https://cli.github.com/) (`gh`) to be installed and on your `PATH`.
+- Supports both GitHub (`gh pr create`) and GitLab (`glab mr create`).
+- Requires the appropriate CLI to be installed:
+  - GitHub: [GitHub CLI](https://cli.github.com/) (`gh`)
+  - GitLab: [GitLab CLI](https://gitlab.com/gitlab-org/cli) (`glab`)
 - Options:
   - `<name>` — optional explicit worktree to operate on; defaults to the current directory.
-  - `--remove` — delete the remote branch after a successful merge.
-  - `--no-push` — skip pushing the branch before creating the PR.
-  - `--draft` — open the PR in draft mode.
-  - `--fill` — let `gh pr create` auto-populate PR metadata.
-  - `--web` — open the PR creation flow in a browser instead of filling via CLI.
-  - `--reviewer <login>` — add one or more reviewers by GitHub login.
-  - `-- <extra gh args>` — pass additional arguments through to `gh pr create`.
+  - `--provider <provider>` — git provider to use (`github` or `gitlab`); defaults to config or GitHub.
+  - `--no-push` — skip pushing the branch before creating the PR/MR.
+  - `--draft` — open the PR/MR in draft mode.
+  - `--fill` — auto-populate PR/MR metadata from commits.
+  - `--web` — open the creation flow in a browser instead of filling via CLI.
+  - `--reviewer <login>` — add one or more reviewers by login.
+  - `-- <extra args>` — pass additional arguments through to `gh pr create` or `glab mr create`.
 
 ### `rsworktree merge`
 
-- Merge the open GitHub pull request for the current or named worktree using `gh pr merge`.
+- Merge the open pull/merge request for the current or named worktree.
 - Demo: ![Merge PR demo](tapes/gifs/merge.gif)
-- Requires the [GitHub CLI](https://cli.github.com/) (`gh`) to be installed and on your `PATH`.
+- Supports both GitHub (`gh pr merge`) and GitLab (`glab mr merge`).
+- Requires the appropriate CLI to be installed (see `review` command above).
 - Options:
   - `<name>` — optional explicit worktree to operate on; defaults to the current directory.
+  - `--provider <provider>` — git provider to use (`github` or `gitlab`); defaults to config or GitHub.
+  - `--remove` — delete the remote branch after a successful merge.
 
 ### `rsworktree worktree open-editor`
 
@@ -108,6 +123,33 @@ brew install rsworktree
 
 After the binary is on your `PATH`, run `rsworktree --help` to explore the available commands.
 
+## Configuration
+
+You can configure rsworktree by creating a `.rsworktree/preferences.json` file in your repository:
+
+```json
+{
+  "editor": {
+    "command": "vim",
+    "args": []
+  },
+  "provider": "gitlab"
+}
+```
+
+### Provider Configuration
+
+The `provider` field sets the default git provider for `review` and `merge` commands:
+- `"github"` (default) — use GitHub CLI (`gh`)
+- `"gitlab"` — use GitLab CLI (`glab`)
+
+Provider resolution order:
+1. `--provider` CLI flag
+2. Config file (`preferences.json`)
+3. `RSWORKTREE_PROVIDER` environment variable
+4. Default (`github`)
+
 ## Environment
 
-Set `RSWORKTREE_SHELL` to override the shell used by `rsworktree cd` (falls back to `$SHELL` or `/bin/sh`).
+- `RSWORKTREE_SHELL` — override the shell used by `rsworktree cd` (falls back to `$SHELL` or `/bin/sh`).
+- `RSWORKTREE_PROVIDER` — set the default git provider (`github` or `gitlab`).

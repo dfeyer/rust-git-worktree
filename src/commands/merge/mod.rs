@@ -5,7 +5,7 @@ use owo_colors::{OwoColorize, Stream};
 use serde::Deserialize;
 
 use crate::{
-    Repo,
+    GitProvider, Repo,
     commands::review::{CommandOutput, CommandRunner, SystemCommandRunner},
 };
 
@@ -14,12 +14,13 @@ pub struct MergeCommand<R = SystemCommandRunner> {
     name: String,
     remove_local_branch: bool,
     remove_remote_branch: bool,
+    provider: GitProvider,
     runner: R,
 }
 
 impl MergeCommand {
-    pub fn new(name: String) -> Self {
-        Self::with_runner(name, SystemCommandRunner)
+    pub fn new(name: String, provider: GitProvider) -> Self {
+        Self::with_runner(name, provider, SystemCommandRunner)
     }
 }
 
@@ -27,11 +28,12 @@ impl<R> MergeCommand<R>
 where
     R: CommandRunner,
 {
-    pub fn with_runner(name: String, runner: R) -> Self {
+    pub fn with_runner(name: String, provider: GitProvider, runner: R) -> Self {
         Self {
             name,
             remove_local_branch: true,
             remove_remote_branch: false,
+            provider,
             runner,
         }
     }
@@ -54,8 +56,10 @@ where
             format!("{}", text.blue())
         });
         println!(
-            "Looking for open PR for `{}` from `{}`...",
-            branch_label, path_label
+            "Looking for open {} for `{}` from `{}`...",
+            self.provider.merge_request_short(),
+            branch_label,
+            path_label
         );
 
         match self.find_pull_request(&repo_root, &branch)? {
@@ -63,7 +67,11 @@ where
                 self.merge_pull_request(&repo_root, &branch, &worktree_path, pr_number)
             }
             None => {
-                println!("No open pull request found for branch `{}`.", branch_label);
+                println!(
+                    "No open {} found for branch `{}`.",
+                    self.provider.merge_request_term(),
+                    branch_label
+                );
                 Ok(())
             }
         }
@@ -110,26 +118,16 @@ where
         repo_path: &Path,
         branch: &str,
     ) -> color_eyre::Result<Option<u64>> {
-        let args = vec![
-            "pr".to_owned(),
-            "list".to_owned(),
-            "--head".to_owned(),
-            branch.to_owned(),
-            "--state".to_owned(),
-            "open".to_owned(),
-            "--json".to_owned(),
-            "number".to_owned(),
-            "--limit".to_owned(),
-            "1".to_owned(),
-        ];
+        let args = self.provider.build_list_args(branch);
+        let cli_program = self.provider.cli_program();
 
         let output = self
             .runner
-            .run("gh", repo_path, &args)
-            .wrap_err("failed to run `gh pr list`")?;
+            .run(cli_program, repo_path, &args)
+            .wrap_err_with(|| format!("failed to run `{} {} list`", cli_program, if self.provider == GitProvider::GitHub { "pr" } else { "mr" }))?;
 
         if !output.success {
-            return Err(command_failure("gh", &args, &output));
+            return Err(command_failure(cli_program, &args, &output));
         }
 
         let stdout = output.stdout.trim();
@@ -137,10 +135,10 @@ where
             return Ok(None);
         }
 
-        let prs: Vec<PullRequestInfo> =
-            serde_json::from_str(stdout).wrap_err("failed to parse `gh pr list` output as JSON")?;
+        let prs: Vec<MergeRequestInfo> = serde_json::from_str(stdout)
+            .wrap_err_with(|| format!("failed to parse `{} {} list` output as JSON", cli_program, if self.provider == GitProvider::GitHub { "pr" } else { "mr" }))?;
 
-        Ok(prs.into_iter().next().map(|pr| pr.number))
+        Ok(prs.into_iter().next().map(|pr| pr.number()))
     }
 
     fn merge_pull_request(
@@ -156,39 +154,36 @@ where
             detached_for_deletion = true;
         }
 
-        let mut args = vec![
-            "pr".to_owned(),
-            "merge".to_owned(),
-            pr_number.to_string(),
-            "--merge".to_owned(),
-        ];
-        if self.remove_local_branch {
-            args.push("--delete-branch".to_owned());
-        }
+        let args = self.provider.build_merge_args(pr_number, self.remove_local_branch);
+        let cli_program = self.provider.cli_program();
 
         let output = self
             .runner
-            .run("gh", repo_path, &args)
-            .wrap_err("failed to run `gh pr merge`")?;
+            .run(cli_program, repo_path, &args)
+            .wrap_err_with(|| format!("failed to run `{} {} merge`", cli_program, if self.provider == GitProvider::GitHub { "pr" } else { "mr" }))?;
 
-        let branch_delete_failed = self.remove_local_branch && gh_branch_delete_failure(&output);
+        let branch_delete_failed = self.remove_local_branch && self.provider.is_branch_delete_failure(&output.stderr);
 
         if !output.success && !branch_delete_failed {
             if detached_for_deletion {
                 let _ = self.restore_worktree_branch(worktree_path, branch);
             }
-            return Err(command_failure("gh", &args, &output));
+            return Err(command_failure(cli_program, &args, &output));
         }
 
-        let pr_label = format_with_color(&format!("#{}", pr_number), |text| {
+        let mr_prefix = if self.provider == GitProvider::GitHub { "#" } else { "!" };
+        let pr_label = format_with_color(&format!("{}{}", mr_prefix, pr_number), |text| {
             format!("{}", text.green().bold())
         });
         let branch_label = format_with_color(branch, |text| format!("{}", text.magenta().bold()));
 
         if branch_delete_failed {
             let warning = format!(
-                "PR {} merged but `gh` could not delete branch `{}`. Leaving the branch intact.",
-                pr_label, branch_label
+                "{} {} merged but `{}` could not delete branch `{}`. Leaving the branch intact.",
+                self.provider.merge_request_short(),
+                pr_label,
+                cli_program,
+                branch_label
             );
             println!(
                 "{}",
@@ -205,7 +200,12 @@ where
         if self.remove_remote_branch {
             self.delete_remote_branch(repo_path, branch)?;
         }
-        println!("Merged PR {} for branch `{}`.", pr_label, branch_label);
+        println!(
+            "Merged {} {} for branch `{}`.",
+            self.provider.merge_request_short(),
+            pr_label,
+            branch_label
+        );
         Ok(())
     }
 
@@ -273,15 +273,6 @@ where
     }
 }
 
-fn gh_branch_delete_failure(output: &CommandOutput) -> bool {
-    if output.success {
-        return false;
-    }
-
-    let stderr = output.stderr.to_lowercase();
-    stderr.contains("failed to delete local branch") || stderr.contains("cannot delete branch")
-}
-
 fn remote_branch_already_gone(output: &CommandOutput) -> bool {
     if output.success {
         return false;
@@ -335,9 +326,22 @@ fn format_with_color(value: &str, paint: impl Fn(&str) -> String) -> String {
         .to_string()
 }
 
+/// Represents a pull/merge request from either GitHub or GitLab.
+/// GitHub returns `number`, GitLab returns `iid`.
 #[derive(Debug, Deserialize)]
-struct PullRequestInfo {
-    number: u64,
+struct MergeRequestInfo {
+    /// GitHub uses `number`
+    #[serde(default)]
+    number: Option<u64>,
+    /// GitLab uses `iid`
+    #[serde(default)]
+    iid: Option<u64>,
+}
+
+impl MergeRequestInfo {
+    fn number(&self) -> u64 {
+        self.number.or(self.iid).unwrap_or(0)
+    }
 }
 
 #[cfg(test)]
@@ -453,7 +457,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), GitProvider::GitHub, runner);
         command.execute(&repo)?;
 
         assert_eq!(
@@ -515,7 +519,7 @@ mod tests {
             status_code: Some(128),
         }));
 
-        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), GitProvider::GitHub, runner);
         let error = command.determine_branch(worktree).unwrap_err();
         let message = format!("{error}");
         assert!(message.contains("git"));
@@ -546,7 +550,7 @@ mod tests {
             status_code: Some(0),
         }));
 
-        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), GitProvider::GitHub, runner);
         let error = command.determine_branch(worktree).unwrap_err();
         assert!(format!("{error}").contains("empty branch name"));
 
@@ -566,7 +570,7 @@ mod tests {
             status_code: Some(0),
         }));
 
-        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), GitProvider::GitHub, runner);
         let error = command
             .find_pull_request(repo_path, "feature/test")
             .unwrap_err();
@@ -618,7 +622,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergeCommand::with_runner("feature/remove".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/remove".into(), GitProvider::GitHub, runner);
         command.enable_remove_remote();
         command.execute(&repo)?;
 
@@ -715,7 +719,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergeCommand::with_runner("feature/keep-local".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/keep-local".into(), GitProvider::GitHub, runner);
         command.disable_remove_local();
         command.execute(&repo)?;
 
@@ -804,7 +808,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergeCommand::with_runner("feature/missing".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/missing".into(), GitProvider::GitHub, runner);
         command.enable_remove_remote();
         command.execute(&repo)?;
 
@@ -855,7 +859,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergeCommand::with_runner("feature/error".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/error".into(), GitProvider::GitHub, runner);
         command.enable_remove_remote();
         let result = command.execute(&repo);
         assert!(
@@ -909,7 +913,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), GitProvider::GitHub, runner);
         command.execute(&repo)?;
 
         assert_eq!(
@@ -988,7 +992,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), GitProvider::GitHub, runner);
         command.execute(&repo)?;
 
         assert_eq!(
@@ -1037,7 +1041,7 @@ mod tests {
             status_code: Some(128),
         }));
 
-        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), GitProvider::GitHub, runner);
         let err = command.execute(&repo).unwrap_err();
         assert!(err.to_string().contains("git rev-parse"));
         Ok(())
@@ -1074,7 +1078,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), GitProvider::GitHub, runner);
         let err = command.execute(&repo).unwrap_err();
         assert!(err.to_string().contains("git switch --detach"));
 

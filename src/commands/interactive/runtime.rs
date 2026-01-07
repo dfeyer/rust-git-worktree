@@ -9,7 +9,7 @@ use crossterm::{
 use ratatui::{Terminal, backend::CrosstermBackend};
 
 use crate::{
-    Repo,
+    GitProvider, Repo,
     commands::{
         cd::{CdCommand, shell_command},
         create::{CreateCommand, CreateOutcome},
@@ -18,7 +18,7 @@ use crate::{
         review::{ReviewCommand, ReviewOptions},
         rm::RemoveCommand,
     },
-    editor::launch_worktree,
+    editor::{launch_worktree, resolve_provider_preference},
 };
 
 use super::{EventSource, Selection, WorktreeEntry, command::InteractiveCommand};
@@ -108,6 +108,7 @@ pub fn run(repo: &Repo) -> Result<()> {
                 command.execute(repo)?;
             }
             Selection::Review(name) => {
+                let provider = resolve_provider_preference(repo).unwrap_or(GitProvider::default());
                 let options = ReviewOptions {
                     name,
                     push: true,
@@ -117,6 +118,7 @@ pub fn run(repo: &Repo) -> Result<()> {
                     remote: String::from("origin"),
                     reviewers: Vec::new(),
                     extra_args: Vec::new(),
+                    provider,
                 };
                 let mut command = ReviewCommand::new(options);
                 command.execute(repo)?;
@@ -127,7 +129,8 @@ pub fn run(repo: &Repo) -> Result<()> {
                 remove_remote_branch,
                 remove_worktree,
             } => {
-                let mut command = MergeCommand::new(name.clone());
+                let provider = resolve_provider_preference(repo).unwrap_or(GitProvider::default());
+                let mut command = MergeCommand::new(name.clone(), provider);
                 if !remove_local_branch {
                     command.disable_remove_local();
                 }
