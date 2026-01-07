@@ -75,7 +75,7 @@ impl Action {
             Action::OpenInEditor => "Open in Editor",
             Action::Remove => "Remove",
             Action::Review => "Review",
-            Action::MergePrGithub => "Merge PR/MR",
+            Action::MergePrGithub => "Merge",
         }
     }
 
