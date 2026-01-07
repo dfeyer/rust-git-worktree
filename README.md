@@ -55,7 +55,7 @@ This is a fork of [rsworktree](https://github.com/ozankasikci/rust-git-worktree)
 ### `rsworktree cd`
 
 - Spawn an interactive shell rooted in the named worktree.
-- **Tmux integration**: When running inside a tmux session, creates a new tmux window (or switches to it if it already exists) named `<project>/<worktree>`.
+- **Tmux integration**: When running inside a tmux session, creates a new tmux session (or switches to it if it already exists) named `<project>/<worktree>`.
 - Demo: ![CD demo](tapes/gifs/cd.gif)
 - Options:
   - `--print` — write the worktree path to stdout without spawning a shell.
@@ -107,10 +107,10 @@ This is a fork of [rsworktree](https://github.com/ozankasikci/rust-git-worktree)
 
 - Open the specified worktree (or the current directory when omitted) in your configured editor.
 - Editor resolution checks the rsworktree config first, then falls back to `$EDITOR` / `$VISUAL`. If no editor is configured, the command prints actionable guidance instead of failing.
-- **Tmux integration**: When running inside a tmux session with a worktree window (e.g., `<project>/<worktree>`):
-  - If an editor pane exists in that window, switches to it.
-  - Otherwise, creates a new horizontal split with the editor.
-  - If the worktree window doesn't exist, creates it with the editor running.
+- **Tmux integration**: When running inside a tmux session:
+  - If the worktree session exists and has an editor pane, switches to it.
+  - If in the worktree session but no editor pane, creates a new horizontal split with the editor.
+  - If the worktree session doesn't exist, creates it with the editor running.
 - Initial support focuses on `vim`, `cursor`, `webstorm`, and `rider`. For setup instructions and troubleshooting, see `specs/002-i-want-to/quickstart.md`.
 
 ## Installation

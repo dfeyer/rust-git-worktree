@@ -82,7 +82,7 @@ impl OpenCommand {
             .and_then(|n| n.to_str())
             .unwrap_or("unknown");
 
-        let window_name = format!("{}/{}", project_name, resolved.name);
+        let session_name = format!("{}/{}", project_name, resolved.name);
 
         // Get the editor command
         let editor_command = match resolve_editor_preference(repo)? {
@@ -94,18 +94,18 @@ impl OpenCommand {
             }
         };
 
-        // Check if we're in the worktree window
-        let current_window = Command::new("tmux")
-            .args(["display-message", "-p", "#{window_name}"])
+        // Check if we're in the worktree session
+        let current_session = Command::new("tmux")
+            .args(["display-message", "-p", "#{session_name}"])
             .output()
-            .wrap_err("failed to get current tmux window name")?;
+            .wrap_err("failed to get current tmux session name")?;
 
-        let current_window_name = String::from_utf8_lossy(&current_window.stdout)
+        let current_session_name = String::from_utf8_lossy(&current_session.stdout)
             .trim()
             .to_string();
 
-        if current_window_name == window_name {
-            // We're in the worktree window, check for editor pane
+        if current_session_name == session_name {
+            // We're in the worktree session, check for editor pane
             if let Some(pane_id) = self.find_editor_pane(&editor_command)? {
                 // Select the existing editor pane
                 let status = Command::new("tmux")
@@ -128,30 +128,30 @@ impl OpenCommand {
             return self.create_editor_pane(repo, resolved, &editor_command);
         }
 
-        // Check if the worktree window exists
+        // Check if the worktree session exists
         let list_output = Command::new("tmux")
-            .args(["list-windows", "-F", "#{window_name}"])
+            .args(["list-sessions", "-F", "#{session_name}"])
             .output()
-            .wrap_err("failed to list tmux windows")?;
+            .wrap_err("failed to list tmux sessions")?;
 
-        let existing_windows = String::from_utf8_lossy(&list_output.stdout);
-        let window_exists = existing_windows
+        let existing_sessions = String::from_utf8_lossy(&list_output.stdout);
+        let session_exists = existing_sessions
             .lines()
-            .any(|line| line.trim() == window_name);
+            .any(|line| line.trim() == session_name);
 
-        if window_exists {
-            // Switch to the window first
+        if session_exists {
+            // Switch to the session first
             let status = Command::new("tmux")
-                .args(["select-window", "-t", &window_name])
+                .args(["switch-client", "-t", &session_name])
                 .status()
-                .wrap_err("failed to switch to tmux window")?;
+                .wrap_err("failed to switch to tmux session")?;
 
             if !status.success() {
-                return Err(eyre::eyre!("failed to switch to tmux window `{}`", window_name));
+                return Err(eyre::eyre!("failed to switch to tmux session `{}`", session_name));
             }
 
-            // Now check for editor pane in that window
-            if let Some(pane_id) = self.find_editor_pane_in_window(&window_name, &editor_command)? {
+            // Now check for editor pane in that session
+            if let Some(pane_id) = self.find_editor_pane_in_session(&session_name, &editor_command)? {
                 let status = Command::new("tmux")
                     .args(["select-pane", "-t", &pane_id])
                     .status()
@@ -161,10 +161,10 @@ impl OpenCommand {
                     return Err(eyre::eyre!("failed to select editor pane"));
                 }
 
-                let window_label = format_with_color(&window_name, |text| {
+                let session_label = format_with_color(&session_name, |text| {
                     format!("{}", text.cyan().bold())
                 });
-                println!("Switched to editor in window `{}`", window_label);
+                println!("Switched to editor in session `{}`", session_label);
                 return Ok(());
             }
 
@@ -172,35 +172,60 @@ impl OpenCommand {
             return self.create_editor_pane(repo, resolved, &editor_command);
         }
 
-        // Window doesn't exist, create it and open editor
+        // Session doesn't exist, create it with editor
+        let editor_args = match resolve_editor_preference(repo)? {
+            EditorPreferenceResolution::Found(pref) => {
+                pref.args.iter()
+                    .map(|a| a.to_string_lossy().into_owned())
+                    .collect::<Vec<_>>()
+            }
+            _ => Vec::new(),
+        };
+
+        let mut cmd_parts = vec![editor_command.clone()];
+        cmd_parts.extend(editor_args);
+        cmd_parts.push(resolved.path.display().to_string());
+        let full_cmd = cmd_parts.join(" ");
+
+        // Create new session (detached) with editor
         let status = Command::new("tmux")
             .args([
-                "new-window",
-                "-n",
-                &window_name,
+                "new-session",
+                "-d",
+                "-s",
+                &session_name,
                 "-c",
                 &resolved.path.display().to_string(),
-                &editor_command,
-                &resolved.path.display().to_string(),
+                &full_cmd,
             ])
             .status()
-            .wrap_err("failed to create tmux window with editor")?;
+            .wrap_err("failed to create tmux session with editor")?;
 
         if !status.success() {
-            return Err(eyre::eyre!("failed to create tmux window `{}`", window_name));
+            return Err(eyre::eyre!("failed to create tmux session `{}`", session_name));
         }
 
-        let window_label = format_with_color(&window_name, |text| {
+        // Switch to the new session
+        let status = Command::new("tmux")
+            .args(["switch-client", "-t", &session_name])
+            .status()
+            .wrap_err("failed to switch to tmux session")?;
+
+        if !status.success() {
+            return Err(eyre::eyre!("failed to switch to tmux session `{}`", session_name));
+        }
+
+        let session_label = format_with_color(&session_name, |text| {
             format!("{}", text.cyan().bold())
         });
-        println!("Created window `{}` with editor", window_label);
+        println!("Created session `{}` with editor", session_label);
         Ok(())
     }
 
     fn find_editor_pane(&self, editor_command: &str) -> color_eyre::Result<Option<String>> {
-        // List panes in current window with their commands
+        // List panes in current session with their commands
         let output = Command::new("tmux")
-            .args(["list-panes", "-F", "#{pane_id}:#{pane_current_command}"])
+            .args(["list-panes", "-s", "-F", "#{pane_id}:#{pane_current_command}"])
             .output()
             .wrap_err("failed to list tmux panes")?;
 
@@ -216,16 +241,17 @@ impl OpenCommand {
         Ok(None)
     }
 
-    fn find_editor_pane_in_window(
+    fn find_editor_pane_in_session(
         &self,
-        window_name: &str,
+        session_name: &str,
         editor_command: &str,
     ) -> color_eyre::Result<Option<String>> {
         let output = Command::new("tmux")
             .args([
                 "list-panes",
+                "-s",
                 "-t",
-                window_name,
+                session_name,
                 "-F",
                 "#{pane_id}:#{pane_current_command}",
             ])

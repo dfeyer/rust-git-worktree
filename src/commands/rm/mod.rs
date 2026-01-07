@@ -171,6 +171,11 @@ impl RemoveCommand {
             );
         }
 
+        // Close tmux session if it exists
+        if std::env::var("TMUX").is_ok() {
+            self.close_tmux_session(repo);
+        }
+
         let need_reposition = match std::env::current_dir() {
             Ok(dir) => {
                 let canonical = fs::canonicalize(&dir).unwrap_or(dir.clone());
@@ -295,6 +300,48 @@ impl RemoveCommand {
                 .wrap_err_with(|| eyre::eyre!("failed to delete local branch reference `{name}`")),
             Err(err) if err.code() == ErrorCode::NotFound => Ok(()),
             Err(err) => Err(eyre::eyre!("failed to look up branch `{name}`: {err}")),
+        }
+    }
+
+    fn close_tmux_session(&self, repo: &Repo) {
+        let project_name = repo
+            .root()
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown");
+
+        let session_name = format!("{}/{}", project_name, self.name);
+
+        // Check if session exists
+        let list_output = Command::new("tmux")
+            .args(["list-sessions", "-F", "#{session_name}"])
+            .output();
+
+        let session_exists = match list_output {
+            Ok(output) => {
+                let sessions = String::from_utf8_lossy(&output.stdout);
+                sessions.lines().any(|line| line.trim() == session_name)
+            }
+            Err(_) => false,
+        };
+
+        if session_exists {
+            // Kill the session
+            let _ = Command::new("tmux")
+                .args(["kill-session", "-t", &session_name])
+                .status();
+
+            if !self.quiet {
+                let session_label = format!(
+                    "{}",
+                    session_name
+                        .as_str()
+                        .if_supports_color(Stream::Stdout, |text| {
+                            format!("{}", text.cyan())
+                        })
+                );
+                println!("Closed tmux session `{}`.", session_label);
+            }
         }
     }
 }

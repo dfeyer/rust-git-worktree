@@ -75,55 +75,66 @@ impl CdCommand {
             .and_then(|n| n.to_str())
             .unwrap_or("unknown");
 
-        let window_name = format!("{}/{}", project_name, self.name);
+        let session_name = format!("{}/{}", project_name, self.name);
 
-        // Check if window with this name already exists
+        // Check if session with this name already exists
         let list_output = Command::new("tmux")
-            .args(["list-windows", "-F", "#{window_name}"])
+            .args(["list-sessions", "-F", "#{session_name}"])
             .output()
-            .wrap_err("failed to list tmux windows")?;
+            .wrap_err("failed to list tmux sessions")?;
 
-        let existing_windows = String::from_utf8_lossy(&list_output.stdout);
-        let window_exists = existing_windows
+        let existing_sessions = String::from_utf8_lossy(&list_output.stdout);
+        let session_exists = existing_sessions
             .lines()
-            .any(|line| line.trim() == window_name);
+            .any(|line| line.trim() == session_name);
 
-        if window_exists {
-            // Switch to existing window
+        if session_exists {
+            // Switch to existing session
             let status = Command::new("tmux")
-                .args(["select-window", "-t", &window_name])
+                .args(["switch-client", "-t", &session_name])
                 .status()
-                .wrap_err("failed to switch to tmux window")?;
+                .wrap_err("failed to switch to tmux session")?;
 
             if !status.success() {
-                return Err(eyre::eyre!("failed to switch to tmux window `{}`", window_name));
+                return Err(eyre::eyre!("failed to switch to tmux session `{}`", session_name));
             }
 
-            let window_label = format_with_color(&window_name, |text| {
+            let session_label = format_with_color(&session_name, |text| {
                 format!("{}", text.cyan().bold())
             });
-            println!("Switched to tmux window `{}`", window_label);
+            println!("Switched to tmux session `{}`", session_label);
         } else {
-            // Create new window
+            // Create new session (detached) then switch to it
             let status = Command::new("tmux")
                 .args([
-                    "new-window",
-                    "-n",
-                    &window_name,
+                    "new-session",
+                    "-d",
+                    "-s",
+                    &session_name,
                     "-c",
                     &canonical.display().to_string(),
                 ])
                 .status()
-                .wrap_err("failed to create tmux window")?;
+                .wrap_err("failed to create tmux session")?;
 
             if !status.success() {
-                return Err(eyre::eyre!("failed to create tmux window `{}`", window_name));
+                return Err(eyre::eyre!("failed to create tmux session `{}`", session_name));
             }
 
-            let window_label = format_with_color(&window_name, |text| {
+            // Switch to the new session
+            let status = Command::new("tmux")
+                .args(["switch-client", "-t", &session_name])
+                .status()
+                .wrap_err("failed to switch to tmux session")?;
+
+            if !status.success() {
+                return Err(eyre::eyre!("failed to switch to tmux session `{}`", session_name));
+            }
+
+            let session_label = format_with_color(&session_name, |text| {
                 format!("{}", text.cyan().bold())
             });
-            println!("Created tmux window `{}`", window_label);
+            println!("Created tmux session `{}`", session_label);
         }
 
         Ok(())
