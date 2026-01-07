@@ -11,7 +11,7 @@ use crate::{
         create::CreateCommand,
         interactive,
         list::ListCommand,
-        merge_pr_github::MergePrGithubCommand,
+        merge::MergeCommand,
         open_editor::OpenEditorCommand,
         pr_github::{PrGithubCommand, PrGithubOptions},
         rm::RemoveCommand,
@@ -44,7 +44,7 @@ enum Commands {
     /// Create a GitHub pull request for the worktree's branch using the GitHub CLI.
     PrGithub(PrGithubArgs),
     /// Merge the GitHub pull request for the current or named worktree.
-    MergePrGithub(MergePrGithubArgs),
+    Merge(MergeArgs),
 }
 
 #[derive(Subcommand, Debug)]
@@ -118,7 +118,7 @@ struct PrGithubArgs {
 }
 
 #[derive(Parser, Debug)]
-struct MergePrGithubArgs {
+struct MergeArgs {
     /// Name of the worktree to merge the PR for (defaults to the current worktree)
     name: Option<String>,
     /// Remove the remote branch after merging
@@ -171,9 +171,9 @@ pub fn run() -> color_eyre::Result<()> {
             let mut command = PrGithubCommand::new(options);
             command.execute(&repo)?;
         }
-        Commands::MergePrGithub(args) => {
-            let worktree_name = resolve_worktree_name(args.name, &repo, "merge-pr-github")?;
-            let mut command = MergePrGithubCommand::new(worktree_name);
+        Commands::Merge(args) => {
+            let worktree_name = resolve_worktree_name(args.name, &repo, "merge")?;
+            let mut command = MergeCommand::new(worktree_name);
             if args.remove_remote {
                 command.enable_remove_remote();
             }
@@ -453,15 +453,15 @@ mod tests {
     }
 
     #[test]
-    fn parses_merge_pr_github_with_remove_flag() {
-        let cli = Cli::try_parse_from(["rsworktree", "merge-pr-github", "feature", "--remove"])
-            .expect("merge-pr-github with remove should parse");
+    fn parses_merge_with_remove_flag() {
+        let cli = Cli::try_parse_from(["rsworktree", "merge", "feature", "--remove"])
+            .expect("merge with remove should parse");
         match cli.command {
-            Commands::MergePrGithub(args) => {
+            Commands::Merge(args) => {
                 assert_eq!(args.name, Some("feature".into()));
                 assert!(args.remove_remote);
             }
-            _ => panic!("expected MergePrGithub command"),
+            _ => panic!("expected Merge command"),
         }
     }
 

@@ -10,20 +10,20 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct MergePrGithubCommand<R = SystemCommandRunner> {
+pub struct MergeCommand<R = SystemCommandRunner> {
     name: String,
     remove_local_branch: bool,
     remove_remote_branch: bool,
     runner: R,
 }
 
-impl MergePrGithubCommand {
+impl MergeCommand {
     pub fn new(name: String) -> Self {
         Self::with_runner(name, SystemCommandRunner)
     }
 }
 
-impl<R> MergePrGithubCommand<R>
+impl<R> MergeCommand<R>
 where
     R: CommandRunner,
 {
@@ -453,7 +453,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergePrGithubCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
         command.execute(&repo)?;
 
         assert_eq!(
@@ -515,7 +515,7 @@ mod tests {
             status_code: Some(128),
         }));
 
-        let mut command = MergePrGithubCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
         let error = command.determine_branch(worktree).unwrap_err();
         let message = format!("{error}");
         assert!(message.contains("git"));
@@ -546,7 +546,7 @@ mod tests {
             status_code: Some(0),
         }));
 
-        let mut command = MergePrGithubCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
         let error = command.determine_branch(worktree).unwrap_err();
         assert!(format!("{error}").contains("empty branch name"));
 
@@ -566,7 +566,7 @@ mod tests {
             status_code: Some(0),
         }));
 
-        let mut command = MergePrGithubCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
         let error = command
             .find_pull_request(repo_path, "feature/test")
             .unwrap_err();
@@ -618,7 +618,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergePrGithubCommand::with_runner("feature/remove".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/remove".into(), runner);
         command.enable_remove_remote();
         command.execute(&repo)?;
 
@@ -715,7 +715,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergePrGithubCommand::with_runner("feature/keep-local".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/keep-local".into(), runner);
         command.disable_remove_local();
         command.execute(&repo)?;
 
@@ -804,7 +804,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergePrGithubCommand::with_runner("feature/missing".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/missing".into(), runner);
         command.enable_remove_remote();
         command.execute(&repo)?;
 
@@ -855,7 +855,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergePrGithubCommand::with_runner("feature/error".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/error".into(), runner);
         command.enable_remove_remote();
         let result = command.execute(&repo);
         assert!(
@@ -909,7 +909,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergePrGithubCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
         command.execute(&repo)?;
 
         assert_eq!(
@@ -988,7 +988,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergePrGithubCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
         command.execute(&repo)?;
 
         assert_eq!(
@@ -1037,7 +1037,7 @@ mod tests {
             status_code: Some(128),
         }));
 
-        let mut command = MergePrGithubCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
         let err = command.execute(&repo).unwrap_err();
         assert!(err.to_string().contains("git rev-parse"));
         Ok(())
@@ -1074,7 +1074,7 @@ mod tests {
             }),
         ]);
 
-        let mut command = MergePrGithubCommand::with_runner("feature/test".into(), runner);
+        let mut command = MergeCommand::with_runner("feature/test".into(), runner);
         let err = command.execute(&repo).unwrap_err();
         assert!(err.to_string().contains("git switch --detach"));
 

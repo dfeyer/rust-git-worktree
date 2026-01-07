@@ -14,7 +14,7 @@ use crate::{
         cd::{CdCommand, shell_command},
         create::{CreateCommand, CreateOutcome},
         list::{find_worktrees, format_worktree},
-        merge_pr_github::MergePrGithubCommand,
+        merge::MergeCommand,
         pr_github::{PrGithubCommand, PrGithubOptions},
         rm::RemoveCommand,
     },
@@ -127,7 +127,7 @@ pub fn run(repo: &Repo) -> Result<()> {
                 remove_remote_branch,
                 remove_worktree,
             } => {
-                let mut command = MergePrGithubCommand::new(name.clone());
+                let mut command = MergeCommand::new(name.clone());
                 if !remove_local_branch {
                     command.disable_remove_local();
                 }

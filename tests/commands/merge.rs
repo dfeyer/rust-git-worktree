@@ -18,7 +18,7 @@ struct StubGh {
 }
 
 #[test]
-fn merge_pr_github_merges_open_pr_for_current_worktree() -> Result<(), Box<dyn Error>> {
+fn merge_merges_open_pr_for_current_worktree() -> Result<(), Box<dyn Error>> {
     let repo_dir = TempDir::new()?;
     init_git_repo(repo_dir.path())?;
 
@@ -45,7 +45,7 @@ fn merge_pr_github_merges_open_pr_for_current_worktree() -> Result<(), Box<dyn E
             "GH_PR_LIST_RESPONSE",
             r#"[{"number": 42, "state": "OPEN"}]"#,
         )
-        .args(["merge-pr-github"])
+        .args(["merge"])
         .assert()
         .success()
         .stdout(predicate::str::contains(
@@ -59,7 +59,7 @@ fn merge_pr_github_merges_open_pr_for_current_worktree() -> Result<(), Box<dyn E
 }
 
 #[test]
-fn merge_pr_github_reports_when_no_pr_found() -> Result<(), Box<dyn Error>> {
+fn merge_reports_when_no_pr_found() -> Result<(), Box<dyn Error>> {
     let repo_dir = TempDir::new()?;
     init_git_repo(repo_dir.path())?;
 
@@ -83,7 +83,7 @@ fn merge_pr_github_reports_when_no_pr_found() -> Result<(), Box<dyn Error>> {
         .env("PATH", &stub.path_value)
         .env("GH_LOG", &stub.log_path)
         .env("GH_PR_LIST_RESPONSE", "[]")
-        .args(["merge-pr-github"])
+        .args(["merge"])
         .assert()
         .success()
         .stdout(predicate::str::contains(

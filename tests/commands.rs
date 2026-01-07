@@ -4,8 +4,8 @@ mod cd;
 mod create;
 #[path = "commands/list.rs"]
 mod list;
-#[path = "commands/merge_pr_github.rs"]
-mod merge_pr_github;
+#[path = "commands/merge.rs"]
+mod merge;
 #[path = "commands/open_editor.rs"]
 mod open_editor;
 #[path = "commands/pr_github.rs"]
