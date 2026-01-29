@@ -46,6 +46,7 @@ fn cd_command_prints_worktree_path() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/test"])
         .assert()
@@ -59,6 +60,7 @@ fn cd_command_prints_worktree_path() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .args(["cd", "feature/test", "--print"])
         .assert()
         .success()
@@ -74,6 +76,7 @@ fn cd_command_spawns_shell_in_worktree() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/test"])
         .assert()
@@ -87,6 +90,7 @@ fn cd_command_spawns_shell_in_worktree() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["cd", "feature/test"])
         .assert()
@@ -106,6 +110,7 @@ fn cd_command_fails_for_missing_worktree() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .args(["cd", "missing", "--print"])
         .assert()
         .failure()

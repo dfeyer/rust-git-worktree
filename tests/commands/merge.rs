@@ -24,6 +24,7 @@ fn merge_merges_open_pr_for_current_worktree() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/test"])
         .assert()
@@ -65,6 +66,7 @@ fn merge_reports_when_no_pr_found() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/test"])
         .assert()

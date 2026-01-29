@@ -6,8 +6,8 @@ mod create;
 mod list;
 #[path = "commands/merge.rs"]
 mod merge;
-#[path = "commands/open_editor.rs"]
-mod open_editor;
+#[path = "commands/open.rs"]
+mod open;
 #[path = "commands/review.rs"]
 mod review;
 #[path = "commands/rm.rs"]

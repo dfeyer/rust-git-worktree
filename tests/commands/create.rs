@@ -55,6 +55,7 @@ fn create_command_creates_worktree_and_updates_gitignore() -> Result<(), Box<dyn
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/test"])
         .assert()
@@ -86,6 +87,7 @@ fn create_command_reuses_existing_branch() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/existing"])
         .assert()
@@ -113,6 +115,7 @@ fn create_command_accepts_branch_option() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/from-main", "--base", "main"])
         .assert()
@@ -166,6 +169,7 @@ fn create_command_preserves_existing_branch_when_base_specified() -> Result<(), 
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/existing", "--base", "main"])
         .assert()
@@ -191,7 +195,8 @@ fn create_command_handles_names_with_reserved_characters() -> Result<(), Box<dyn
     for name in names {
         Command::cargo_bin("rsworktree")?
             .current_dir(repo_dir.path())
-            .env("RSWORKTREE_SHELL", "env")
+            .env_remove("TMUX")
+        .env("RSWORKTREE_SHELL", "env")
             .args(["create", name])
             .assert()
             .success();

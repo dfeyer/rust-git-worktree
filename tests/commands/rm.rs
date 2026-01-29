@@ -46,6 +46,7 @@ fn rm_command_removes_existing_worktree() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/remove-me"])
         .assert()
@@ -59,6 +60,7 @@ fn rm_command_removes_existing_worktree() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .args(["rm", "feature/remove-me"])
         .assert()
         .success()
@@ -84,6 +86,7 @@ fn rm_command_handles_missing_worktree() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .args(["rm", "missing"])
         .assert()
         .success()
@@ -102,6 +105,7 @@ fn rm_command_spawns_root_shell_when_called_inside_worktree() -> Result<(), Box<
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/move-back"])
         .assert()
@@ -117,6 +121,7 @@ fn rm_command_spawns_root_shell_when_called_inside_worktree() -> Result<(), Box<
 
     Command::cargo_bin("rsworktree")?
         .current_dir(&worktree_path)
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["rm", "feature/move-back"])
         .assert()
@@ -136,6 +141,7 @@ fn rm_command_refuses_locked_worktree_without_force() -> Result<(), Box<dyn Erro
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/locked"])
         .assert()
@@ -151,6 +157,7 @@ fn rm_command_refuses_locked_worktree_without_force() -> Result<(), Box<dyn Erro
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .args(["rm", "feature/locked"])
         .assert()
         .failure();
@@ -167,6 +174,7 @@ fn rm_command_force_removes_locked_worktree() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/locked-force"])
         .assert()
@@ -185,6 +193,7 @@ fn rm_command_force_removes_locked_worktree() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .args(["rm", "feature/locked-force", "--force"])
         .assert()
         .success();

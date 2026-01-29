@@ -481,6 +481,7 @@ mod tests {
         let repo = Repo::discover_from(dir.path())?;
 
         unsafe {
+            std::env::remove_var("TMUX");
             std::env::set_var(SHELL_OVERRIDE_ENV, "env");
         }
         let create = CreateCommand::new("feature/local".into(), None);

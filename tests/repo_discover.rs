@@ -46,6 +46,7 @@ fn repo_discover_from_inside_linked_worktree_finds_parent_repo() -> Result<(), B
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/discover"])
         .assert()

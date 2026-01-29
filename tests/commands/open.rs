@@ -42,6 +42,7 @@ fn run(dir: &Path, cmd: impl IntoIterator<Item = &'static str>) -> Result<(), Bo
 fn create_worktree(repo_dir: &Path, name: &str) -> Result<(), Box<dyn Error>> {
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir)
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", name])
         .assert()
@@ -60,7 +61,8 @@ fn open_editor_uses_env_editor_and_reports_success() -> Result<(), Box<dyn Error
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
-        .args(["worktree", "open-editor", "feature/test"])
+        .env_remove("TMUX")
+        .args(["worktree", "open", "feature/test"])
         .assert()
         .success()
         .stdout(
@@ -84,7 +86,8 @@ fn open_editor_guidance_when_no_preference() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
-        .args(["worktree", "open-editor", "feature/empty"])
+        .env_remove("TMUX")
+        .args(["worktree", "open", "feature/empty"])
         .assert()
         .success()
         .stdout(predicate::str::contains("No editor configured"));
@@ -101,7 +104,8 @@ fn open_editor_errors_when_worktree_missing() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
-        .args(["worktree", "open-editor", "missing"])
+        .env_remove("TMUX")
+        .args(["worktree", "open", "missing"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("worktree `missing` not found"));
@@ -158,9 +162,10 @@ fn open_editor_with_path_flag() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .args([
             "worktree",
-            "open-editor",
+            "open",
             "--path",
             worktree_path.to_str().unwrap(),
         ])
@@ -179,7 +184,8 @@ fn open_editor_errors_when_path_does_not_exist() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
-        .args(["worktree", "open-editor", "--path", "/nonexistent/path"])
+        .env_remove("TMUX")
+        .args(["worktree", "open", "--path", "/nonexistent/path"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("does not exist"));
@@ -199,7 +205,8 @@ fn open_editor_matches_partial_name() -> Result<(), Box<dyn Error>> {
     // Match by last segment
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
-        .args(["worktree", "open-editor", "unique-name"])
+        .env_remove("TMUX")
+        .args(["worktree", "open", "unique-name"])
         .assert()
         .success()
         .stdout(predicate::str::contains("feature/unique-name"));
@@ -217,7 +224,8 @@ fn open_editor_errors_on_ambiguous_name() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
-        .args(["worktree", "open-editor", "shared"])
+        .env_remove("TMUX")
+        .args(["worktree", "open", "shared"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("ambiguous"));
@@ -244,7 +252,8 @@ fn open_editor_uses_preferences_file() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
-        .args(["worktree", "open-editor", "feature/prefs"])
+        .env_remove("TMUX")
+        .args(["worktree", "open", "feature/prefs"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Opened"));

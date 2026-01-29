@@ -79,6 +79,7 @@ fn review_invokes_gh_with_expected_arguments() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/test"])
         .assert()
@@ -131,6 +132,7 @@ fn review_defaults_to_current_worktree() -> Result<(), Box<dyn Error>> {
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/test"])
         .assert()
@@ -182,6 +184,7 @@ fn review_defaults_to_fill_when_metadata_missing() -> Result<(), Box<dyn Error>>
 
     Command::cargo_bin("rsworktree")?
         .current_dir(repo_dir.path())
+        .env_remove("TMUX")
         .env("RSWORKTREE_SHELL", "env")
         .args(["create", "feature/test"])
         .assert()

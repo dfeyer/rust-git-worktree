@@ -220,6 +220,7 @@ mod tests {
 
         let create = CreateCommand::new("feature/test".into(), None);
         unsafe {
+            std::env::remove_var("TMUX");
             std::env::set_var(SHELL_OVERRIDE_ENV, "env");
         }
         create.execute(&repo)?;

@@ -271,6 +271,11 @@ mod tests {
         let dir = TempDir::new().expect("tempdir");
         let repo = init_repo(&dir);
 
+        unsafe {
+            std::env::remove_var("EDITOR");
+            std::env::remove_var("VISUAL");
+        }
+
         let resolution = resolve_editor_preference(&repo).expect("resolution");
         assert!(matches!(
             resolution,
@@ -336,6 +341,11 @@ mod tests {
             "other_setting": true
         });
         fs::write(&config_path, serde_json::to_vec(&json).unwrap()).expect("write config");
+
+        unsafe {
+            std::env::remove_var("EDITOR");
+            std::env::remove_var("VISUAL");
+        }
 
         let resolution = resolve_editor_preference(&repo).expect("resolution");
         assert!(matches!(
