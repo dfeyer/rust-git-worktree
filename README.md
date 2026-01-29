@@ -32,6 +32,7 @@ This is a fork of [rsworktree](https://github.com/ozankasikci/rust-git-worktree)
   - [`rsworktree merge`](#rsworktree-merge)
   - [`rsworktree worktree open`](#rsworktree-worktree-open)
 - [Installation](#installation)
+- [Hooks](#hooks)
 - [Environment](#environment)
 
 ## Interactive mode
@@ -155,6 +156,68 @@ Provider resolution order:
 2. Config file (`preferences.json`)
 3. `RSWORKTREE_PROVIDER` environment variable
 4. Default (`github`)
+
+## Hooks
+
+rsworktree supports convention-based hooks that run at specific points in the worktree lifecycle. Hooks are executable scripts placed in `.rsworktree/hooks/`.
+
+### Available Hooks
+
+| Hook | Trigger |
+|------|---------|
+| `post-create` | Runs after a new worktree is created |
+
+### Setup
+
+1. Create the hooks directory:
+   ```bash
+   mkdir -p .rsworktree/hooks
+   ```
+
+2. Create your hook script (e.g., `.rsworktree/hooks/post-create`):
+   ```bash
+   #!/bin/sh
+   echo "Setting up worktree: $RSWORKTREE_NAME"
+   npm install
+   ```
+
+3. Make it executable:
+   ```bash
+   chmod +x .rsworktree/hooks/post-create
+   ```
+
+### Environment Variables
+
+Hooks receive context via environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `RSWORKTREE_NAME` | Name of the worktree |
+| `RSWORKTREE_PATH` | Full path to the worktree directory |
+| `RSWORKTREE_BRANCH` | Branch name for the worktree |
+| `RSWORKTREE_BASE_BRANCH` | Base branch (empty if not specified) |
+
+### Example: Auto-setup Development Environment
+
+```bash
+#!/bin/sh
+# .rsworktree/hooks/post-create
+
+# Install dependencies
+if [ -f "package.json" ]; then
+    npm install
+fi
+
+# Allow direnv if present
+if [ -f ".envrc" ]; then
+    direnv allow
+fi
+
+# Copy environment template
+if [ -f ".env.example" ] && [ ! -f ".env" ]; then
+    cp .env.example .env
+fi
+```
 
 ## Environment
 

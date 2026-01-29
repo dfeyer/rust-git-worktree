@@ -7,6 +7,7 @@ use owo_colors::{OwoColorize, Stream};
 use git2::{ErrorCode, WorktreeAddOptions};
 
 use crate::{Repo, commands::cd::CdCommand};
+use crate::hooks::{HookContext, HookName, HookRunner};
 
 #[derive(Debug)]
 pub struct CreateCommand {
@@ -89,6 +90,17 @@ impl CreateCommand {
                     worktree_path.display()
                 )
             })?;
+
+        // Run post-create hook if it exists
+        let hook_runner = HookRunner::new(&worktrees_dir);
+        let hook_context = HookContext {
+            worktree_name: self.name.clone(),
+            worktree_path: worktree_path.clone(),
+            branch: target_branch.to_string(),
+            base_branch: base_branch.map(String::from),
+            base_path: worktrees_dir.clone(),
+        };
+        hook_runner.run_hook(HookName::PostCreate, &hook_context)?;
 
         if !quiet {
             let name = format!(
