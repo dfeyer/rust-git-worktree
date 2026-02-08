@@ -1,4 +1,4 @@
-use std::{fs, path::Path, process::Command};
+use std::{fs, io::Write, io::IsTerminal, path::Path, process::Command};
 
 use color_eyre::eyre::{self, Context};
 use owo_colors::{OwoColorize, Stream};
@@ -130,6 +130,37 @@ impl RemoveCommand {
                 });
             }
         };
+
+        if !self.force
+            && !self.quiet
+            && std::io::stdin().is_terminal()
+            && !branch_has_upstream(git_repo, &self.name)
+        {
+            let branch_label = format!(
+                "{}",
+                self.name
+                    .as_str()
+                    .if_supports_color(Stream::Stdout, |text| format!("{}", text.cyan()))
+            );
+            println!(
+                "Warning: branch `{}` has not been pushed to any remote.",
+                branch_label
+            );
+            print!("Are you sure you want to remove this worktree? [y/N] ");
+            std::io::stdout().flush().ok();
+
+            let mut answer = String::new();
+            std::io::stdin()
+                .read_line(&mut answer)
+                .wrap_err("failed to read user input")?;
+
+            if !matches!(answer.trim(), "y" | "Y" | "yes" | "Yes" | "YES") {
+                return Ok(RemoveOutcome {
+                    local_branch: None,
+                    repositioned: false,
+                });
+            }
+        }
 
         let worktree = git_repo.find_worktree(&worktree_name).wrap_err_with(|| {
             eyre::eyre!("failed to load git worktree metadata for `{}`", self.name)
@@ -346,6 +377,14 @@ impl RemoveCommand {
     }
 }
 
+
+pub(crate) fn branch_has_upstream(repo: &git2::Repository, name: &str) -> bool {
+    match repo.find_branch(name, BranchType::Local) {
+        Ok(branch) => branch.upstream().is_ok(),
+        Err(_) => false,
+    }
+}
+
 fn find_worktree_name(
     repo: &git2::Repository,
     worktree_path: &Path,
@@ -490,7 +529,7 @@ mod tests {
         let worktree_path = repo.worktrees_dir().join("feature/local");
         std::env::set_current_dir(&worktree_path)?;
 
-        let command = RemoveCommand::new("feature/local".into(), false);
+        let command = RemoveCommand::new("feature/local".into(), false).with_quiet(true);
         let outcome = command.execute(&repo)?;
         assert!(
             outcome.repositioned,

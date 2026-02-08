@@ -227,19 +227,29 @@ impl Snapshot {
         let popup_area = centered_rect(60, 45, area);
         frame.render_widget(Clear, popup_area);
 
+        let header_height = if dialog.branch_not_pushed { 5 } else { 4 };
+
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(4),
+                Constraint::Length(header_height),
                 Constraint::Length(5),
                 Constraint::Length(3),
             ])
             .split(popup_area);
 
-        let header_lines = vec![
+        let mut header_lines = vec![
             Line::from(format!("Remove worktree `{name}`")),
             Line::from("Choose any additional cleanup before removing."),
         ];
+        if dialog.branch_not_pushed {
+            header_lines.push(Line::from(Span::styled(
+                "Warning: branch has not been pushed to any remote",
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            )));
+        }
         let header = Paragraph::new(header_lines).block(
             Block::default()
                 .title("Confirm removal")

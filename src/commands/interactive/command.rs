@@ -27,7 +27,7 @@ use super::{
     view::{DetailData, DialogView, Snapshot},
 };
 use crate::{
-    commands::rm::{LocalBranchStatus, RemoveOutcome},
+    commands::rm::{LocalBranchStatus, RemoveOutcome, branch_has_upstream},
     editor::LaunchOutcome,
     telemetry::{EditorLaunchStatus, log_editor_launch_attempt},
 };
@@ -408,7 +408,19 @@ where
                     }
                     Action::Remove => {
                         if let Some(index) = self.selected {
-                            self.dialog = Some(Dialog::Remove(RemoveDialog::new(index)));
+                            let branch_not_pushed = self
+                                .worktrees
+                                .get(index)
+                                .and_then(|entry| {
+                                    Repository::open(&entry.path).ok().map(|repo| {
+                                        !branch_has_upstream(&repo, &entry.name)
+                                    })
+                                })
+                                .unwrap_or(false);
+                            self.dialog = Some(Dialog::Remove(RemoveDialog::new(
+                                index,
+                                branch_not_pushed,
+                            )));
                         } else {
                             self.status =
                                 Some(StatusMessage::info("No worktree selected to remove."));

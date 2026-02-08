@@ -340,19 +340,21 @@ pub(crate) struct RemoveDialog {
     pub(crate) options_selected: usize,
     pub(crate) buttons_selected: usize,
     pub(crate) remove_local_branch: bool,
+    pub(crate) branch_not_pushed: bool,
 }
 
 impl RemoveDialog {
     const OPTION_COUNT: usize = 1;
     const BUTTON_COUNT: usize = 2;
 
-    pub(crate) fn new(index: usize) -> Self {
+    pub(crate) fn new(index: usize, branch_not_pushed: bool) -> Self {
         Self {
             index,
             focus: RemoveDialogFocus::Options,
             options_selected: 0,
             buttons_selected: 1,
             remove_local_branch: true,
+            branch_not_pushed,
         }
     }
 
@@ -398,6 +400,7 @@ pub(crate) struct RemoveDialogView {
     pub(crate) options_selected: usize,
     pub(crate) buttons_selected: usize,
     pub(crate) remove_local_branch: bool,
+    pub(crate) branch_not_pushed: bool,
 }
 
 impl From<&RemoveDialog> for RemoveDialogView {
@@ -407,6 +410,7 @@ impl From<&RemoveDialog> for RemoveDialogView {
             options_selected: dialog.options_selected,
             buttons_selected: dialog.buttons_selected,
             remove_local_branch: dialog.remove_local_branch,
+            branch_not_pushed: dialog.branch_not_pushed,
         }
     }
 }
